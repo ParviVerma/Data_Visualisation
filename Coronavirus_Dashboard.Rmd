@@ -1,0 +1,173 @@
+
+---
+title: "Coronavirus (COVID-19) Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: column
+---
+<style type="text/css">
+
+.chart-title {  /* chart_title  */
+   font-size: 20px;
+   font-family: Times New Roman;
+
+</style>
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(DT)
+library(knitr)
+library(highcharter)
+library(plotly)
+library(dplyr)
+library(readxl)
+library(ggplot2)
+library(lubridate)
+library(maps)
+library(plotly)
+library(readr)
+```
+
+
+```{r include = FALSE}
+data <- read_excel("E:/RMIT/Semester 4/Data Visualisation/Assignments/Assignment3/WHO-COVID-19-global-data1.xlsx",sheet = "WHO-COVID-19-global-data")
+```
+
+
+```{r include = FALSE}
+data$Date <- as.Date(data$Date)
+View(data)
+data_latest <- data %>% filter(Date %in% max(data$Date))
+View(data_latest)
+```
+
+
+```{r}
+tempdf <- data %>% group_by(Date) %>%
+              summarise(Ncases = sum(New_cases),
+                        Ndeaths = sum(New_deaths))
+View(tempdf)
+```
+
+Confirmed Cases
+=======================================================================
+
+Column {data-width=600}
+-------------------------------------
+    
+### Global Spread
+
+
+```{r}
+data(worldgeojson, package = "highcharter")
+
+data_latest %>% 
+  group_by(Country) %>% 
+  summarise(tot_confirm = sum(Cases))  -> countries
+
+highchart() %>%
+  hc_add_series_map(worldgeojson, countries, value = 'tot_confirm', joinBy = c('name','Country'), name = "Confirmed Cases")  %>% 
+  hc_colorAxis( minColor = "#9ecae1", maxColor = "#08306b",min = 0, max = 300000) %>%
+  hc_title(text = "Global Spread of COVID-19") %>%
+  hc_mapNavigation(enabled = TRUE) %>% 
+  hc_subtitle(text = 'Total Confirmed Cases')
+```
+
+
+  
+Column {data-width=400}
+-------------------------------------
+    
+### Daily New Cases
+    
+```{r}
+
+tempdf %>% plot_ly(x = ~Date, y = ~Ncases, type = "bar")  %>% 
+    layout(showlegend = F,yaxis = list(range = c(0,150000),title = "Cases per day",xaxis = list(title = "Date")))
+
+```
+    
+### Most Affected Countries
+
+```{r}
+tempdf1 <- data %>% filter(Date %in% max(data$Date)) %>% 
+                    select(Country, Cases, Deaths) %>%
+                    group_by(Country) %>% 
+                    summarise(Cases = sum(Cases), Deaths = sum(Deaths)) %>% 
+                    arrange(-Cases) %>% 
+                    head(10)
+tempdf1$Country[tempdf1$Country  == "United States of America"] <- "USA "
+tempdf1$Country[tempdf1$Country  == "United Kingdom"] <- "UK "
+
+tempdf1 %>% plot_ly(x = ~Cases, y = ~Country, type = "bar",orientation = 'h',marker = list(color = c("#00003f","#08306b",
+                                    "#08519c",
+                                    "#2171b5",
+                                    "#4292c6",
+                                    "#6baed6",
+                                    "#9ecae1",
+                                    "#c6dbef",
+                                    "#deebf7",
+                                    "#f7fbff")))  %>% 
+    layout(showlegend = F,xaxis = list(title = "Number of Confirmed Cases", range = c(0,2000000)), yaxis = list(categoryarray = ~Country, categoryorder = "Country",title = "Country"))
+
+```
+
+
+Deaths
+=======================================================================
+
+Column {data-width=600}
+-------------------------------------
+    
+### Global Spread
+    
+```{r}
+data(worldgeojson, package = "highcharter")
+
+data_latest %>% 
+  group_by(Country) %>% 
+  summarise(tot_confirm = sum(Deaths))  -> countries
+
+highchart() %>%
+  hc_add_series_map(worldgeojson, countries, value = 'tot_confirm', joinBy = c('name','Country'),name = "Deaths")  %>% 
+  hc_colorAxis( minColor = "#fcbba1", maxColor = "#67000d",min = 0, max = 10000) %>% 
+  hc_title(text = "Global Spread of COVID-19") %>% 
+  hc_mapNavigation(enabled = TRUE) %>% 
+  hc_subtitle(text = 'Total Deaths') 
+```
+   
+Column {data-width=400}
+-------------------------------------
+    
+### Daily Deaths
+    
+```{r}
+tempdf %>% plot_ly(x = ~Date, y = ~Ndeaths, type = "bar", color = "red")  %>% 
+    layout(showlegend = F,yaxis = list(range = c(0,15000),title = "Deaths per day",xaxis = list(title = "Date")))
+```
+    
+### Most Affected Countries
+
+```{r}
+
+tempdf2 <- data %>% filter(Date %in% max(data$Date)) %>% 
+                    select(Country, Deaths, Cases) %>%
+                    group_by(Country) %>% 
+                    summarise(Deaths = sum(Deaths),Cases = sum(Cases)) %>% 
+                    arrange(-Deaths) %>% 
+                    head(10)
+tempdf2$Country[tempdf2$Country  == "United States of America"] <- "USA "
+tempdf2$Country[tempdf2$Country  == "United Kingdom"] <- "UK "
+
+tempdf2 %>% plot_ly(x = ~Deaths, y = ~Country, type = "bar", orientation = 'h',marker = list(color = c("#340000","#67000d",
+                                    "#a50f15",
+                                    "#cb181d",
+                                    "#ef3b2c",
+                                    "#fb6a4a",
+                                    "#fc9272",
+                                    "#fcbba1",
+                                    "#fee0d2",
+                                    "#fff5f0")))  %>%
+    layout(showlegend = F,xaxis = list(title = "Number of Deaths", range = c(0,120000)), yaxis = list(categoryarray = ~Country, categoryorder = "Deaths",title = "Country"))
+```
+
